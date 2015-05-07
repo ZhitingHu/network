@@ -29,11 +29,11 @@ class MMSBModel {
   inline const vector<pair<float, float> >& lambda() const { return lambda_; }
 
  private:
-  void SampleMinibatch(set<VIndex>& vertex_batch,
-    vector<pair<VIndex, VIndex> >& link_batch,
+  void SampleMinibatch(unordered_set<VIndex>& vertex_batch,
+    set<pair<VIndex, VIndex> >& link_batch,
     const Count batch_size);
-  void CollectLinks(vector<pair<VIndex, VIndex> >& link_batch,
-    const set<VIndex>& vertex_batch);
+  void CollectLinks(set<pair<VIndex, VIndex> >& link_batch,
+    const unordered_set<VIndex>& vertex_batch);
   void GibbsSample();
   void MHSample();
   void VIComputeGrads();
@@ -44,6 +44,7 @@ class MMSBModel {
   void InitModelState();
 
   void EstimateBeta();
+  void ComputeExpELogBeta();
   float ComputeLinkLikelihood(const VIndex i, const VIndex j,
       const bool positive);
   inline float MembershipProb(const Count cnt, const Count degree);
@@ -69,12 +70,12 @@ class MMSBModel {
   pair<float, float> eta_; // prior of community strength
   float alpha_; // prior of community membership
 
-  /* --------- train -------- */
+  /* -------------------- Train --------------------- */
   int iter_;
   float lr_; // learning rate
   Count train_batch_size_;
-  set<VIndex> train_batch_vertices_;
-  vector<pair<VIndex, VIndex> > train_batch_links_;
+  unordered_set<VIndex> train_batch_vertices_;
+  set<pair<VIndex, VIndex> > train_batch_links_;
   vector<CIndex> train_batch_k_cnts_; // statistics of the samples
 
   /// test data (postive and negative links)
@@ -84,6 +85,7 @@ class MMSBModel {
   //vector<pair<VIndex, VIndex> > test_batch_links_;
   
   // for gibbs sampling, size = K_
+  vector<float> exp_Elog_beta_;
   vector<float> comm_probs_;
 
   clock_t start_time_;

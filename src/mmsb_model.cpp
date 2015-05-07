@@ -33,6 +33,7 @@ void MMSBModel::Init(const ModelParameter& param) {
   train_batch_size_ = param_.solver_param().train_batch_size();
   train_batch_k_cnts_.resize(K_);
   /// sampling
+  exp_Elog_beta_.resize(K_);
   comm_probs_.resize(K_);
 }
 
@@ -81,7 +82,7 @@ void MMSBModel::InitModelState() {
   /// community assignment
   for (VIndex i = 0; i < vertices_.size(); ++i) {
     Vertex* v = vertices_[i];
-    const map<VIndex, CIndex>& neighbor_z = v->neighbor_z();
+    const unordered_map<VIndex, CIndex>& neighbor_z = v->neighbor_z();
     for (const auto nz : neighbor_z) {
       VIndex j = nz.first;
       if (i >= j) continue;
@@ -100,14 +101,13 @@ void MMSBModel::InitModelState() {
 
 /* -------------------- Train --------------------- */
 
-void MMSBModel::SampleMinibatch(set<VIndex>& vertex_batch, 
-    vector<pair<VIndex, VIndex> >& link_batch, const Count batch_size) {
-  //
+void MMSBModel::SampleMinibatch(unordered_set<VIndex>& vertex_batch,
+    set<pair<VIndex, VIndex> >& link_batch, const Count batch_size) {
   vertex_batch.clear();
   for (int i = 0; i < batch_size; ++i) {
     while (true) {
       VIndex v = Context::randUInt32() % vertices_.size();
-      if (vertex_batch.find(v) == vertex_batch.end()) {
+      if (vertex_batch.find(v) == vertex_batch.end()) { // to avoid duplicate
         vertex_batch.insert(v);
         break;
       }
@@ -119,16 +119,29 @@ void MMSBModel::SampleMinibatch(set<VIndex>& vertex_batch,
   
   CollectLinks(link_batch, vertex_batch);
 
-  //TODO: temp
+  //TODO: seperate ?
   for (const auto& link : link_batch) {
     vertex_batch.insert(link.first);
     vertex_batch.insert(link.second);
   }
+
+  LOG(INFO) << vertex_batch.size() << " vertexes, " 
+      << link_batch.size() << " links";
 }
 
-void MMSBModel::CollectLinks(vector<pair<VIndex, VIndex> >& link_batch,
-    const set<VIndex>& vertex_batch) {
+void MMSBModel::CollectLinks(set<pair<VIndex, VIndex> >& link_batch,
+    const unordered_set<VIndex>& vertex_batch) {
   link_batch.clear();
+  for (const auto i : vertex_batch) {
+    const unordered_map<VIndex, CIndex>& neighbor_z
+        = vertices_[i]->neighbor_z();
+    for (const auto& nz : neighbor_z) {
+      pair<VIndex, VIndex> link
+          = make_pair(min(i, nz.first), max(i, nz.first));
+      link_batch.insert(link);
+    } // end of neighbors of i
+  } // end of vertexes
+
   //for (const auto i : vertex_batch) {
   //  for (const auto j : vertex_batch) {
   //    if (i < j && vertices_[i]->IsNeighbor(j)) {
@@ -136,21 +149,12 @@ void MMSBModel::CollectLinks(vector<pair<VIndex, VIndex> >& link_batch,
   //    }
   //  }
   //}
-  set<pair<VIndex, VIndex> > links;
-  for (const auto i : vertex_batch) {
-    const map<VIndex, CIndex>& neighbor_z_ = vertices_[i]->neighbor_z();
-    for (const auto& nz : neighbor_z_) {
-      pair<VIndex, VIndex> link = pair<int, int>(min(i, nz.first), max(i, nz.first));
-      if (links.find(link) == links.end()) {
-        links.insert(link);
-        link_batch.push_back(make_pair(i, nz.first));
-      }
-    }
-  }
 }
 
 void MMSBModel::GibbsSample() {
-for (int ii = 0; ii < 1; ++ii) {
+  ComputeExpELogBeta();
+
+for (int ii = 0; ii < 1; ++ii) { //TODO: temp
   fill(train_batch_k_cnts_.begin(), train_batch_k_cnts_.end(), 0);
   for (const auto& link : train_batch_links_) {
     VIndex i = link.first;
@@ -164,7 +168,8 @@ for (int ii = 0; ii < 1; ++ii) {
     CIndex z_prev = v_i->neighbor_z(j);
     v_i->RemoveZ(z_prev);
     v_j->RemoveZ(z_prev);
-    
+   
+    // Compute distribution 
     float prob_sum = 0;
     for (int k = 0; k < K_; ++k) {
       int nik = v_i->z_cnt(k);
@@ -173,11 +178,9 @@ for (int ii = 0; ii < 1; ++ii) {
           + (nik == 0 ? 0 : nik * 1.0 / (v_i->degree() - 1)); // to avoid divide-by-0
       float factor_j = alpha_ / (vertices_.size() - 2)
           + (njk == 0 ? 0 : njk * 1.0 / (v_j->degree() - 1)); // to avoid divide-by-0
-      float factor_k = std::exp(mmsb::digamma(lambda_[k].first) // TODO: pre-compute
-          - mmsb::digamma(lambda_[k].first + lambda_[k].second));
-      comm_probs_[k] = factor_i * factor_j * factor_k;
+      comm_probs_[k] = factor_i * factor_j * exp_Elog_beta_[k];
 
-      CHECK(!isnan(comm_probs_[k])) << factor_i << "\t" << factor_j << "\t" << factor_k 
+      CHECK(!isnan(comm_probs_[k])) << factor_i << "\t" << factor_j << "\t" << exp_Elog_beta_[k] 
           << "\t" << lambda_[k].second << "\t" << lambda_[k].first << "\t" 
           << mmsb::digamma(lambda_[k].first) << "\t" << mmsb::digamma(lambda_[k].first + lambda_[k].second) << "\t" << k;
 
@@ -214,8 +217,9 @@ void MMSBModel::VIComputeGrads() {
   //      / (train_batch_vertices_.size() * (train_batch_vertices_.size() - 1.0));
   //TODO: temp
   //batch_scale = 1.0;
-  float batch_scale = vertices_.size() * 1.0 / train_batch_vertices_.size() / 2.0;
+  float batch_scale = 0.5 * vertices_.size() / train_batch_vertices_.size();
 
+  // Reset grads & intermidiate stats
   fill(lambda_grads_.begin(), lambda_grads_.end(), make_pair(0, 0));
   fill(bphi_sum_.begin(), bphi_sum_.end(), 0);
   fill(bphi_square_sum_.begin(), bphi_square_sum_.end(), 0);
@@ -224,7 +228,7 @@ void MMSBModel::VIComputeGrads() {
     CHECK_LT(i, vertices_.size());
     float degree = vertices_[i]->degree();
     CHECK_GT(degree, 0) << i;
-    const map<CIndex, Count>& z_cnts = vertices_[i]->z_cnts();
+    const unordered_map<CIndex, Count>& z_cnts = vertices_[i]->z_cnts();
     for (const auto z_cnt : z_cnts) {
       CHECK_LT(z_cnt.first, K_);
       bphi_sum_[z_cnt.first] += z_cnt.second / degree;
@@ -236,20 +240,20 @@ void MMSBModel::VIComputeGrads() {
   for (const auto& link : train_batch_links_) {
     VIndex i = link.first;
     VIndex j = link.second;
-    const map<CIndex, Count>& z_cnts_i = vertices_[i]->z_cnts();
+    const unordered_map<CIndex, Count>& z_cnts_i = vertices_[i]->z_cnts();
     Vertex* v_j = vertices_[j];
     float degree_i = vertices_[i]->degree();
     float degree_j = v_j->degree();
     //TODO(zhiting) iterates i or j whose degree is smaller
     for (const auto z_cnt_i : z_cnts_i) { 
-      int z = z_cnt_i.first;
+      CIndex z = z_cnt_i.first;
       lambda_grads_[z].second
           -= (z_cnt_i.second / degree_i) * (v_j->z_cnt(z) / degree_j);
     }
   } // end of links
 
   for (int k = 0; k < K_; ++k) {
-    lambda_grads_[k].first += 2 * train_batch_k_cnts_[k]; // !!Caution
+    lambda_grads_[k].first += 2.0 * train_batch_k_cnts_[k]; // !!Caution
 
     CHECK(!isnan(lambda_grads_[k].first)) << k << "\t" << train_batch_k_cnts_[k] << "\t" << batch_scale;
     CHECK(!isinf(lambda_grads_[k].first)) << k << "\t" << train_batch_k_cnts_[k] << "\t" << batch_scale;
@@ -291,6 +295,14 @@ void MMSBModel::EstimateBeta() {
     oss << beta_[k] << "\t";
   }
   //LOG(INFO) << oss.str();
+}
+
+void MMSBModel::ComputeExpELogBeta() {
+  for (int k = 0; k < K_; ++k) {
+    exp_Elog_beta_[k]
+        = std::exp(mmsb::digamma(lambda_[k].first)
+        - mmsb::digamma(lambda_[k].first + lambda_[k].second));
+  }
 }
 
 /// Assume beta_ is ready
@@ -386,15 +398,21 @@ void MMSBModel::Solve(const char* resume_file) {
     }
 
     /// 
+    clock_t start_data = std::clock();
     SampleMinibatch(train_batch_vertices_, train_batch_links_, train_batch_size_);
+    LOG(INFO) << "data time " << (std::clock() - start_data) / (float)CLOCKS_PER_SEC;
 
     /// local step
     //MHSample();
+    clock_t start_sample = std::clock();
     GibbsSample();
+    LOG(INFO) << "sample time " << (std::clock() - start_sample) / (float)CLOCKS_PER_SEC;
 
     /// global step
+    clock_t start_vi = std::clock();
     VIComputeGrads();
     VIUpdate();
+    LOG(INFO) << "vi time " << (std::clock() - start_vi) / (float)CLOCKS_PER_SEC;
   }
   if (param_.solver_param().snapshot_after_train()) {
     Snapshot(); 
@@ -467,7 +485,7 @@ void MMSBModel::SnapshotVis() {
   CHECK(z_file.is_open()) << "Fail to open " << z_path;
   for (int i = 0; i < vertices_.size(); ++i) {
     z_file << i << "\t" << vertices_[i]->degree() << "\t";
-    const map<CIndex, Count>& z_cnts = vertices_[i]->z_cnts();
+    const unordered_map<CIndex, Count>& z_cnts = vertices_[i]->z_cnts();
     for (const auto& e : z_cnts) {
       z_file << e.first << ":" << e.second << "\t"; 
     }

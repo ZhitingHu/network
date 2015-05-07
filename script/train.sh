@@ -18,7 +18,7 @@ dataset=web-Google
 # Input files:
 model_filename="${app_dir}/models/wiki/model.prototxt"
 #snapshot_filename="${app_dir}/output/ca-AstroPhmmsb.iter.10000"
-snapshot_filename="${app_dir}/output/web-Googlemmsb.iter.2700"
+#snapshot_filename="${app_dir}/output/web-Googlemmsb.iter.2700"
 
 # Datset Parameters
 #train_data="${app_dir}/data/wiki-Vote/wiki-Vote_reindex.txt"
@@ -50,7 +50,7 @@ cmd="mkdir -p ${log_dir}; \
     --model ${model_filename} \
     --mmsb_output ${outputs_prefix} \
     --train_data $train_data \
-    --test_data $test_data \
-    --snapshot ${snapshot_filename}"
+    --test_data $test_data" #\
+    #--snapshot ${snapshot_filename}"
 
 eval $cmd  # Use this to run locally (on one machine).

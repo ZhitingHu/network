@@ -6,6 +6,8 @@
 #include <iostream>  // NOLINT(readability/streams)
 #include <map>
 #include <set>
+#include <unordered_set>
+#include <unordered_map>
 #include <sstream>
 #include <string>
 #include <utility>  // pair
@@ -37,9 +39,11 @@ using std::iterator;
 using std::make_pair;
 using std::vector;
 using std::map;
+using std::unordered_map;
 using std::ostringstream;
 using std::pair;
 using std::set;
+using std::unordered_set;
 using std::string;
 using std::stringstream;
 using std::max;

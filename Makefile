@@ -1,9 +1,6 @@
 
 PROJECT := mmsb
 
-# Petuum
-include defns-ditree.mk
-
 # comment it to speedup
 DEBUG = 1
 
@@ -45,7 +42,6 @@ OBJS := $(PROTO_OBJS) $(DITREE_OBJS)
 BUILD_OBJ_DIR = $(BUILD_DIR)/src
 BUILD_LIB_DIR = $(BUILD_DIR)/lib
 THIRD_PARTY_DIR = ${PROJECT_DIR}/../MMSB/third_party
-EXTERNAL_THIRD_PARTY_DIR = /home/zhitingh/github-release/internal_bac/third_party
 
 DITREE_STATIC_NAME = $(BUILD_LIB_DIR)/lib$(PROJECT).a
 
