@@ -1,0 +1,63 @@
+import codecs
+import sys
+from sets import Set
+
+# input
+data_filename = 'data/wiki-Vote/wiki-Vote.txt'
+test_data_filename = 'data/wiki-Vote/validation-edges.txt'
+map_filename = 'data/wiki-Vote/node_index_map.txt'
+# ouput
+out_train_filename = 'data/wiki-Vote/wiki-Vote_train.txt'
+out_test_filename = 'data/wiki-Vote/wiki-Vote_test.txt'
+num_header_lines_to_skip = 4
+
+data_fin = open(data_filename, 'r')
+test_data_fin = open(test_data_filename, 'r')
+map_fin = open(map_filename, 'r')
+
+train_fout = open(out_train_filename, 'w')
+test_fout = open(out_test_filename, 'w')
+
+# read index map
+idx_map = {}
+for line in map_fin:
+  parts = line.strip().split('\t')
+  idx_prev = int(parts[0])
+  idx_new = int(parts[1])
+  idx_map[idx_prev] = idx_new
+print("#Vertices {0}".format(len(idx_map)))
+map_fin.close()
+
+# read test data & output
+test_set = {}
+for line in test_data_fin:
+  parts = line.strip().split('\t')
+  from_idx = idx_map[int(parts[0])]
+  to_idx = idx_map[int(parts[1])]
+  min_idx = min(from_idx, to_idx)
+  max_idx = max(from_idx, to_idx)
+  test_set[(min_idx, max_idx)] = 1
+  test_fout.write("{0}\t{1}\t{2}\n".format(min_idx, max_idx, parts[2]))
+print("#Test links (pos and neg) {0}".format(len(test_set)))
+test_data_fin.close()
+test_fout.close()
+
+# read whole data & output
+# skip header lines
+for i in range(0, num_header_lines_to_skip):
+  data_fin.readline();
+num_train_links = 0
+for line in data_fin:
+  line = line.strip()
+  parts = line.split('\t')
+  from_idx = idx_map[int(parts[0])]
+  to_idx = idx_map[int(parts[1])]
+  min_idx = min(from_idx, to_idx)
+  max_idx = max(from_idx, to_idx)
+  if (min_idx, max_idx) in test_set:
+    continue
+  train_fout.write("{0}\t{1}\n".format(min_idx, max_idx))
+  num_train_links += 1
+print("#Train links (pos) {0}".format(num_train_links))
+data_fin.close()
+train_fout.flush()

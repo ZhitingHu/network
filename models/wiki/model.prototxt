@@ -1,0 +1,17 @@
+alpha: 0.1
+eta_0: 1.0
+eta_1: 1.0
+epsilon: 0
+num_comms: 500
+solver_param {
+  train_batch_size: 20000
+  test_batch_size: 100
+  base_lr: 0.4
+  test_iter: 1
+  test_interval: 10
+  test_initialization: true
+  display: 100
+  max_iter: 15000
+  snapshot: 100
+  snapshot_after_train: true
+}

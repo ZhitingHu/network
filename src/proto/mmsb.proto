@@ -1,0 +1,54 @@
+syntax = "proto2";
+
+package mmsb;
+
+
+message ModelParameter {
+  optional float alpha = 1;
+  optional float eta_0 = 2;
+  optional float eta_1 = 3;
+  optional float epsilon = 4;
+  optional int32 num_comms = 5;
+  repeated float lambda_0 = 6;
+  repeated float lambda_1 = 7;
+  repeated VertexParameter vertices = 8;
+  optional SolverParameter solver_param = 9;
+}
+
+message VertexParameter {
+  optional int32 index = 1;
+  repeated int32 neighbors = 2;
+  repeated int32 z = 3;
+}
+
+// Next index: 12
+message SolverParameter {
+  optional int32 train_batch_size = 8;
+  optional int32 test_batch_size = 9;
+  optional float base_lr = 10;
+  // The number of iterations for test.
+  optional int32 test_iter = 1;
+  // The number of iterations between two testing phases.
+  optional int32 test_interval = 2;
+  // If true, run an initial test pass before the first iteration,
+  // ensuring memory availability and printing the starting value of the loss.
+  optional bool test_initialization = 3 [default = true];
+  // the number of iterations between displaying info. If display = 0, no info
+  // will be displayed.
+  optional int32 display = 4;
+  optional int32 max_iter = 5;
+  optional int32 snapshot = 6 [default = 0]; // The snapshot interval
+  optional bool snapshot_after_train = 7 [default = true]; 
+  optional SolverState solver_state = 11;
+}
+
+// A message that stores the solver snapshots
+message SolverState {
+  optional int32 iter = 1; // The current iteration
+  optional Phase phase = 2;
+}
+
+enum Phase {
+  kTrain = 0;
+  kTest = 1;
+}
