@@ -11,24 +11,21 @@ prog_path=${app_dir}/build/tools/${progname}
 ## Parameters
 ##=====================================
 
-#dataset=wiki-Vote
-#dataset=ca-AstroPh
-dataset=web-Google
+dataset=ca-AstroPh
+#dataset=web-Google
 
 # Input files:
-model_filename="${app_dir}/models/wiki/model.prototxt"
-#snapshot_filename="${app_dir}/output/ca-AstroPhmmsb.iter.10000"
-#snapshot_filename="${app_dir}/output/web-Googlemmsb.iter.2700"
 
 # Datset Parameters
-#train_data="${app_dir}/data/wiki-Vote/wiki-Vote_reindex.txt"
-#test_data="${app_dir}/data/wiki-Vote/validation-edges.txt"
-#
+model_filename="${app_dir}/models/ca-AstroPh/model.prototxt"
 train_data="${app_dir}/data/ca-AstroPh/ca-AstroPh_reindex.txt"
 test_data="${app_dir}/data/ca-AstroPh/validation-edges.txt"
+#snapshot_filename="${app_dir}/output/ca-AstroPhmmsb.iter.10000"
 #
+#model_filename="${app_dir}/models/web-Google/model.prototxt"
 #train_data="${app_dir}/data/web-Google/web-Google.txt_reindex"
 #test_data="${app_dir}/data/web-Google/validation-edges.txt"
+#snapshot_filename="${app_dir}/output/web-Googlemmsb.iter.2700"
 
 output_dir=$app_dir/output
 output_dir="${output_dir}/${dataset}"
