@@ -1,6 +1,9 @@
 
 PROJECT := mmsb
 
+CONFIG_FILE := Makefile.config
+include $(CONFIG_FILE)
+
 # comment it to speedup
 DEBUG = 1
 

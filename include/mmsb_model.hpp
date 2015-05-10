@@ -3,6 +3,7 @@
 
 #include "vertex.hpp"
 #include "context.hpp"
+#include "alias_table.hpp"
 
 #include <ctime>
 
@@ -36,6 +37,9 @@ class MMSBModel {
     const unordered_set<VIndex>& vertex_batch);
   void GibbsSample();
   void MHSample();
+  CIndex MHSampleLink(const Vertex* v_i, const Vertex* v_j, const CIndex z_prev);
+  CIndex MHSampleWithVertexProposal(const Vertex* v_a, const Vertex* v_b,
+      const CIndex z_prev, const CIndex s);
   void VIComputeGrads();
   void VIUpdate();
   void Test();
@@ -48,7 +52,6 @@ class MMSBModel {
   float ComputeLinkLikelihood(const VIndex i, const VIndex j,
       const bool positive);
   inline float MembershipProb(const Count cnt, const Count degree);
-
 
  private:
   ModelParameter param_;
@@ -84,11 +87,18 @@ class MMSBModel {
   //Count test_batch_link_size_;
   //vector<pair<VIndex, VIndex> > test_batch_links_;
   
-  // for gibbs sampling, size = K_
-  vector<float> exp_Elog_beta_;
+  // For sampling, size = K_
   vector<float> comm_probs_;
+  vector<float> exp_Elog_beta_;
+  AliasTable beta_alias_table_;
 
   clock_t start_time_;
+
+  // temp: for debug
+  Count beta_proposal_accept_times_;
+  Count beta_proposal_times_;
+  Count vertex_proposal_accept_times_;
+  Count vertex_proposal_times_;
 };
  
 inline float MMSBModel::MembershipProb(

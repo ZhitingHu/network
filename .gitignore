@@ -45,5 +45,5 @@ distribute/*
 third_party/
 
 # Data and outputs
-data/*
+#data/*
 output/*

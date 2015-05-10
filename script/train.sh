@@ -24,13 +24,11 @@ model_filename="${app_dir}/models/wiki/model.prototxt"
 #train_data="${app_dir}/data/wiki-Vote/wiki-Vote_reindex.txt"
 #test_data="${app_dir}/data/wiki-Vote/validation-edges.txt"
 #
-#train_data="${app_dir}/data/ca-AstroPh/ca-AstroPh_reindex.txt"
-#test_data="${app_dir}/data/ca-AstroPh/validation-edges.txt"
+train_data="${app_dir}/data/ca-AstroPh/ca-AstroPh_reindex.txt"
+test_data="${app_dir}/data/ca-AstroPh/validation-edges.txt"
 #
-train_data="${app_dir}/data/web-Google/web-Google.txt_reindex"
-test_data="${app_dir}/data/web-Google/validation-edges.txt"
-
-##=====================================
+#train_data="${app_dir}/data/web-Google/web-Google.txt_reindex"
+#test_data="${app_dir}/data/web-Google/validation-edges.txt"
 
 output_dir=$app_dir/output
 output_dir="${output_dir}/${dataset}"
@@ -38,6 +36,8 @@ mkdir -p ${output_dir}
 
 log_dir=$output_dir/logs
 outputs_prefix=${output_dir}
+
+##=====================================
 
 cmd="mkdir -p ${log_dir}; \
     GLOG_logtostderr=false \

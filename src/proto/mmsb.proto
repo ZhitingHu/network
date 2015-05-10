@@ -21,7 +21,7 @@ message VertexParameter {
   repeated int32 z = 3;
 }
 
-// Next index: 12
+// Next index: 13
 message SolverParameter {
   optional int32 train_batch_size = 8;
   optional int32 test_batch_size = 9;
@@ -40,6 +40,7 @@ message SolverParameter {
   optional int32 snapshot = 6 [default = 0]; // The snapshot interval
   optional bool snapshot_after_train = 7 [default = true]; 
   optional SolverState solver_state = 11;
+  optional SamplerType sampler_type = 12 [default = MHSampler];
 }
 
 // A message that stores the solver snapshots
@@ -52,3 +53,9 @@ enum Phase {
   kTrain = 0;
   kTest = 1;
 }
+
+enum SamplerType {
+  MHSampler = 0;
+  GibbsSampler = 1;
+}
+

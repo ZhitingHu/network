@@ -8,12 +8,20 @@ namespace mmsb {
 
 class AliasTable {
  public:
-  AliasTable() { };
+  AliasTable(): sampled_times_(0) { };
   
- private:
+  /// p: (un-normalized) distribution
+  void BuildAliasTable(const vector<float>& p);
+  uint32_t Propose();
+
+  inline size_t sampled_times() const { return sampled_times_; }
 
  private:
 
+ private:
+  vector<uint32_t> alias_;
+  vector<uint64_t> height_;
+  size_t sampled_times_;
 };
 
 } // namespace mmsb 

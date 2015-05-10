@@ -59,7 +59,7 @@ class Context {
   inline static float rand() {
     return Get().random_generator_->rand();
   }
-  inline static uint32 randUInt32() {
+  inline static uint64_t randUInt64() {
     return Get().random_generator_->randInt();
   }
   inline static size_t randDiscrete(const vector<float>& distrib, 

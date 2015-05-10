@@ -4,7 +4,9 @@
 #include <cmath>
 #include <algorithm>
 
+#include <boost/cstdint.hpp>
 #include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/gamma_distribution.hpp>
 #include <boost/random/exponential_distribution.hpp>
@@ -17,19 +19,24 @@ namespace mmsb {
 // Random number generator
 class Random {
   boost::mt19937 generator;
+  boost::uniform_int<uint64_t> uint64_dist;
+  boost::variate_generator<boost::mt19937&,
+                           boost::uniform_int<uint64_t> > uint64_generator;
   boost::uniform_real<> zero_one_dist;
   boost::variate_generator<boost::mt19937&,
                            boost::uniform_real<> > zero_one_generator;
   
 public:
-  Random(unsigned int seed) :
+  Random(uint64_t seed) :
     generator(seed),
-    zero_one_dist(0,1),
+    uint64_dist(0, std::numeric_limits<uint64_t>::max()),
+    uint64_generator(generator, uint64_dist),
+    zero_one_dist(0, 1),
     zero_one_generator(generator, zero_one_dist)
   { }
   
   // Draws a random unsigned integer
-  unsigned int randInt() {
+  uint64_t randInt() {
     return generator();
   }
   
